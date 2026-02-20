@@ -1,6 +1,31 @@
 import { useRef, useEffect, useCallback } from "react";
 
 function App() {
+  const wsConnection = useRef<WebSocket>(null);
+
+  useEffect(() => {
+    const WS_URL = import.meta.env.VITE_WS_URL!;
+    const socket = new WebSocket(WS_URL);
+
+    // Connection opened
+    socket.addEventListener("open", () => {
+      socket.send("Connection established");
+    });
+
+    // Listen for messages
+    socket.addEventListener("message", (event) => {
+      console.log("Message from server ", event.data);
+    });
+
+    wsConnection.current = socket;
+
+    return () => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+    };
+  }, []);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
 
@@ -43,6 +68,8 @@ function App() {
       const { x, y } = getPos(e);
       ctx.lineTo(x, y);
       ctx.stroke();
+
+      wsConnection.current?.send(JSON.stringify({ x, y }));
     },
     [getCtx, getPos],
   );
