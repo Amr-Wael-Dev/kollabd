@@ -5,6 +5,7 @@ A web-based whiteboard. With shareable sessions, so you and your friends/colleag
 ---
 
 ## Tech Stack:
+
 - React + WebSocket API + tldraw for the client
 - Express.js + socket.io for the server
 - Vite + React Compiler for development and bundling
