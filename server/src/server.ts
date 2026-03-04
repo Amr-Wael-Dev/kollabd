@@ -11,8 +11,19 @@ app.use(express.static("public"));
 const PORT = process.env.PORT!;
 const BASE_URL = process.env.BASE_URL!;
 
-const rooms = new Map();
-const users = new Map();
+interface Room {
+  roomName: string;
+  users: Set<string>;
+}
+
+interface User {
+  ws: WebSocket;
+  userName: string;
+  roomId: string;
+}
+
+const rooms = new Map<string, Room>();
+const users = new Map<string, User>();
 
 enum EVENTS {
   CREATE = "create",
@@ -33,7 +44,8 @@ function handleMessage(ws: WebSocket, data: RawData) {
   console.log("[WS] Message received:", message);
 
   if (message.type === EVENTS.CREATE) {
-    const { roomName, userName } = message;
+    const roomName = message.roomName as string;
+    const userName = message.userName as string;
     const roomId = crypto.randomUUID();
     const userId = crypto.randomUUID();
 
@@ -52,8 +64,9 @@ function handleMessage(ws: WebSocket, data: RawData) {
   }
 
   if (message.type === EVENTS.JOIN) {
-    const { roomId, userName } = message;
-    const room = rooms.get(roomId as string);
+    const roomId = message.roomId as string;
+    const userName = message.userName as string;
+    const room = rooms.get(roomId);
 
     if (!room) {
       console.error(`[JOIN] Room not found: ${roomId}`);
@@ -79,18 +92,20 @@ function handleMessage(ws: WebSocket, data: RawData) {
   }
 
   if (message.type === EVENTS.DRAW) {
-    const { userId, timestamp, x, y } = message;
-    const room = rooms.get(users.get(userId).roomId);
-    const roomUsersWithoutSender = Array.from(room.users).filter(
-      (uId) => uId !== userId,
-    );
-    for (const uId of roomUsersWithoutSender) {
-      const user = users.get(uId);
-      const userWs = user.ws;
+    const userId = message.userId as string;
+    const { timestamp, x, y } = message;
 
-      if (userWs.readyState === WebSocket.OPEN) {
-        userWs.send(JSON.stringify({ timestamp, x, y }));
-      }
+    const sender = users.get(userId);
+    if (!sender) return;
+
+    const room = rooms.get(sender.roomId);
+    if (!room) return;
+
+    for (const uId of room.users) {
+      if (uId === userId) continue;
+      const user = users.get(uId);
+      if (!user || user.ws.readyState !== WebSocket.OPEN) continue;
+      user.ws.send(JSON.stringify({ timestamp, x, y }));
     }
   }
 }
