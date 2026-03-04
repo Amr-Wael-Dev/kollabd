@@ -1,9 +1,62 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import WebSocketProvider from "./providers/WebSocketProvider";
+import { useWebSocket } from "./hooks/useWebSocket";
 
 type Screen = "welcome" | "create" | "join" | "whiteboard";
 
 function App() {
+  return (
+    <>
+      <WebSocketProvider>
+        <ScreenManager />
+      </WebSocketProvider>
+    </>
+  );
+}
+
+function ScreenManager() {
+  const [roomName, setRoomName] = useState("");
+  const [roomId, setRoomId] = useState("");
+  const [userName, setUserName] = useState("");
+
   const [screen, setScreen] = useState<Screen>("welcome");
+  const { webSocket, setWebSocket } = useWebSocket();
+
+  useEffect(() => {
+    return () => {
+      if (webSocket?.readyState === WebSocket.OPEN) {
+        console.log("[WS] Closing connection on unmount");
+        webSocket?.close();
+      }
+    };
+  }, [webSocket]);
+
+  const connectToWebSocket = useCallback(
+    (payload: Record<string, string>) => {
+      const WS_URL = import.meta.env.VITE_WS_URL!;
+      const socket = new WebSocket(WS_URL);
+
+      socket.addEventListener("open", () => {
+        console.log("Connection established");
+        socket.send(JSON.stringify(payload));
+      });
+
+      socket.addEventListener("message", (event) => {
+        console.log("Message from server ", event.data);
+      });
+
+      socket.addEventListener("close", () => {
+        console.log("[WS] Connection closed");
+      });
+
+      socket.addEventListener("error", (event) => {
+        console.error("[WS] Error:", event);
+      });
+
+      setWebSocket(socket);
+    },
+    [setWebSocket],
+  );
 
   if (screen === "welcome") {
     return (
@@ -37,15 +90,30 @@ function App() {
             e.preventDefault();
             console.log("[App] Creating room, navigating to whiteboard");
             setScreen("whiteboard");
+            connectToWebSocket({ roomName, userName, type: "create" });
           }}
         >
           <label style={styles.label}>
             Room Name
-            <input style={styles.input} type="text" placeholder="My Room" required />
+            <input
+              style={styles.input}
+              type="text"
+              placeholder="My Room"
+              required
+              value={roomName}
+              onChange={(event) => setRoomName(event.target.value)}
+            />
           </label>
           <label style={styles.label}>
             Username
-            <input style={styles.input} type="text" placeholder="Your name" required />
+            <input
+              style={styles.input}
+              type="text"
+              placeholder="Your name"
+              required
+              value={userName}
+              onChange={(event) => setUserName(event.target.value)}
+            />
           </label>
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <button type="submit" style={styles.btn}>
@@ -74,15 +142,30 @@ function App() {
             e.preventDefault();
             console.log("[App] Joining room, navigating to whiteboard");
             setScreen("whiteboard");
+            connectToWebSocket({ roomId, userName, type: "join" });
           }}
         >
           <label style={styles.label}>
             Room ID
-            <input style={styles.input} type="text" placeholder="Enter room ID" required />
+            <input
+              style={styles.input}
+              type="text"
+              placeholder="Enter room ID"
+              required
+              value={roomId}
+              onChange={(event) => setRoomId(event.target.value)}
+            />
           </label>
           <label style={styles.label}>
             Username
-            <input style={styles.input} type="text" placeholder="Your name" required />
+            <input
+              style={styles.input}
+              type="text"
+              placeholder="Your name"
+              required
+              value={userName}
+              onChange={(event) => setUserName(event.target.value)}
+            />
           </label>
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <button type="submit" style={styles.btn}>
@@ -105,45 +188,15 @@ function App() {
 }
 
 function Whiteboard() {
-  const wsConnection = useRef<WebSocket>(null);
-
+  const { webSocket } = useWebSocket();
+  const wsRef = useRef(webSocket);
   useEffect(() => {
-    const WS_URL = import.meta.env.VITE_WS_URL!;
-    const socket = new WebSocket(WS_URL);
-
-    // Connection opened
-    socket.addEventListener("open", () => {
-      console.log("Connection established");
-    });
-
-    // Listen for messages
-    socket.addEventListener("message", (event) => {
-      console.log("Message from server ", event.data);
-    });
-
-    socket.addEventListener("close", () => {
-      console.log("[WS] Connection closed");
-    });
-
-    socket.addEventListener("error", (event) => {
-      console.error("[WS] Error:", event);
-    });
-
-    wsConnection.current = socket;
-
-    return () => {
-      if (socket.readyState === WebSocket.OPEN) {
-        console.log("[WS] Closing connection on unmount");
-        socket.close();
-      }
-    };
-  }, []);
+    wsRef.current = webSocket;
+  }, [webSocket]);
 
   const sendDrawing = useCallback((pos: { x: number; y: number }) => {
     const timestamp = new Date().toISOString();
-    wsConnection.current?.send(
-      JSON.stringify({ ...pos, timestamp, type: "write" }),
-    );
+    wsRef.current?.send(JSON.stringify({ ...pos, timestamp, type: "write" }));
   }, []);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
