@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from "react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import RoomInfoCard from "./RoomInfoCard";
+import type { DrawMessage } from "@kollabd/shared";
 
 interface WhiteboardProps {
   userId: string;
@@ -23,15 +24,13 @@ export default function Whiteboard({
 
   const sendDrawing = useCallback(
     (pos: { x: number; y: number }) => {
-      const timestamp = new Date().toISOString();
-      wsRef.current?.send(
-        JSON.stringify({
-          userId,
-          ...pos,
-          timestamp,
-          type: "draw",
-        }),
-      );
+      const message: DrawMessage = {
+        type: "draw",
+        userId,
+        timestamp: new Date().toISOString(),
+        ...pos,
+      };
+      wsRef.current?.send(JSON.stringify(message));
     },
     [userId],
   );

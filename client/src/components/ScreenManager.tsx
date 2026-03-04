@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import { useWebSocket } from "../hooks/useWebSocket";
 import Whiteboard from "./Whiteboard";
+import type {
+  CreateMessage,
+  JoinMessage,
+  ServerMessage,
+} from "@kollabd/shared";
 
 type Screen = "welcome" | "create" | "join" | "whiteboard";
 
@@ -24,7 +29,7 @@ export default function ScreenManager() {
   }, [webSocket]);
 
   const connectToWebSocket = useCallback(
-    (payload: Record<string, string>) => {
+    (payload: CreateMessage | JoinMessage) => {
       setConnecting(true);
       const WS_URL = import.meta.env.VITE_WS_URL!;
       const socket = new WebSocket(WS_URL);
@@ -34,18 +39,18 @@ export default function ScreenManager() {
       });
 
       socket.addEventListener("message", (event) => {
-        const message = JSON.parse(event.data);
+        const message: ServerMessage = JSON.parse(event.data);
 
-        if (message.error) {
+        if ("error" in message) {
           toast.error(message.error);
           setConnecting(false);
           socket.close();
           return;
         }
 
-        if (message.roomId) setRoomId(message.roomId);
-        if (message.roomName) setRoomName(message.roomName);
-        setUserId(message.userId);
+        if ("roomId" in message) setRoomId(message.roomId);
+        if ("roomName" in message) setRoomName(message.roomName);
+        if ("userId" in message) setUserId(message.userId);
         setConnecting(false);
         setScreen("whiteboard");
         toast.success("Connected to room!");

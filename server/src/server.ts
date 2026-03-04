@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import { type RawData, WebSocket, WebSocketServer } from "ws";
 import dotenv from "dotenv";
+import { EVENTS, type Room, type User } from "@kollabd/shared";
 
 dotenv.config();
 const app = express();
@@ -11,27 +12,12 @@ app.use(express.static("public"));
 const PORT = process.env.PORT!;
 const BASE_URL = process.env.BASE_URL!;
 
-interface Room {
-  roomName: string;
-  users: Set<string>;
-}
-
-interface User {
+interface ServerUser extends User {
   ws: WebSocket;
-  userName: string;
-  roomId: string;
 }
 
 const rooms = new Map<string, Room>();
-const users = new Map<string, User>();
-
-enum EVENTS {
-  CREATE = "create",
-  JOIN = "join",
-  LEAVE = "leave",
-  // ---------------
-  DRAW = "draw",
-}
+const users = new Map<string, ServerUser>();
 
 function handleMessage(ws: WebSocket, data: RawData) {
   let message: Record<string, unknown>;
@@ -41,7 +27,6 @@ function handleMessage(ws: WebSocket, data: RawData) {
     console.error("[WS] Failed to parse message:", data.toString());
     return;
   }
-  console.log("[WS] Message received:", message);
 
   if (message.type === EVENTS.CREATE) {
     const roomName = message.roomName as string;
@@ -53,10 +38,6 @@ function handleMessage(ws: WebSocket, data: RawData) {
 
     const roomUsers = new Set([userId]);
     rooms.set(roomId, { roomName, users: roomUsers });
-
-    console.log(
-      `[CREATE] Room "${roomName}" created by "${userName}" (roomId=${roomId}, userId=${userId})`,
-    );
 
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ roomId, userId }));
@@ -81,10 +62,6 @@ function handleMessage(ws: WebSocket, data: RawData) {
     users.set(userId, { ws, userName, roomId });
 
     room.users.add(userId);
-
-    console.log(
-      `[JOIN] "${userName}" joined room "${roomName}" (roomId=${roomId}, userId=${userId})`,
-    );
 
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ roomName, userId }));
@@ -112,8 +89,6 @@ function handleMessage(ws: WebSocket, data: RawData) {
 
 const wsServer = new WebSocketServer({ server });
 wsServer.on("connection", function connection(wsConnection) {
-  console.log("New client connected");
-
   wsConnection.on("message", function message(data) {
     handleMessage(wsConnection, data);
   });
@@ -124,19 +99,14 @@ wsServer.on("connection", function connection(wsConnection) {
         const room = rooms.get(user.roomId);
         if (room) {
           room.users.delete(userId);
-          console.log(
-            `[LEAVE] "${user.userName}" left room "${room.roomName}" (roomId=${user.roomId})`,
-          );
           if (room.users.size === 0) {
             rooms.delete(user.roomId);
-            console.log(`[CLEANUP] Room "${room.roomName}" deleted (empty)`);
           }
         }
         users.delete(userId);
         break;
       }
     }
-    console.log("[WS] Client disconnected");
   });
 });
 
