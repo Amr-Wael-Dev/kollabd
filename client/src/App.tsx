@@ -18,6 +18,7 @@ function ScreenManager() {
   const [roomName, setRoomName] = useState("");
   const [roomId, setRoomId] = useState("");
   const [userName, setUserName] = useState("");
+  const [userId, setUserId] = useState("");
 
   const [screen, setScreen] = useState<Screen>("welcome");
   const { webSocket, setWebSocket } = useWebSocket();
@@ -43,6 +44,9 @@ function ScreenManager() {
 
       socket.addEventListener("message", (event) => {
         console.log("Message from server ", event.data);
+        const message = JSON.parse(event.data);
+        const { userId: _userId } = message;
+        setUserId(_userId);
       });
 
       socket.addEventListener("close", () => {
@@ -184,20 +188,30 @@ function ScreenManager() {
     );
   }
 
-  return <Whiteboard />;
+  return <Whiteboard userId={userId} />;
 }
 
-function Whiteboard() {
+function Whiteboard(props: { userId: string }) {
   const { webSocket } = useWebSocket();
   const wsRef = useRef(webSocket);
   useEffect(() => {
     wsRef.current = webSocket;
   }, [webSocket]);
 
-  const sendDrawing = useCallback((pos: { x: number; y: number }) => {
-    const timestamp = new Date().toISOString();
-    wsRef.current?.send(JSON.stringify({ ...pos, timestamp, type: "write" }));
-  }, []);
+  const sendDrawing = useCallback(
+    (pos: { x: number; y: number }) => {
+      const timestamp = new Date().toISOString();
+      wsRef.current?.send(
+        JSON.stringify({
+          userId: props.userId,
+          ...pos,
+          timestamp,
+          type: "draw",
+        }),
+      );
+    },
+    [props.userId],
+  );
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);

@@ -18,6 +18,8 @@ enum EVENTS {
   CREATE = "create",
   JOIN = "join",
   LEAVE = "leave",
+  // ---------------
+  DRAW = "draw",
 }
 
 function handleMessage(ws: WebSocket, data: RawData) {
@@ -73,6 +75,22 @@ function handleMessage(ws: WebSocket, data: RawData) {
 
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ roomName, userId }));
+    }
+  }
+
+  if (message.type === EVENTS.DRAW) {
+    const { userId, timestamp, x, y } = message;
+    const room = rooms.get(users.get(userId).roomId);
+    const roomUsersWithoutSender = Array.from(room.users).filter(
+      (uId) => uId !== userId,
+    );
+    for (const uId of roomUsersWithoutSender) {
+      const user = users.get(uId);
+      const userWs = user.ws;
+
+      if (userWs.readyState === WebSocket.OPEN) {
+        userWs.send(JSON.stringify({ timestamp, x, y }));
+      }
     }
   }
 }
