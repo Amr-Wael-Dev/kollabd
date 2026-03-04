@@ -1,6 +1,110 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+
+type Screen = "welcome" | "create" | "join" | "whiteboard";
 
 function App() {
+  const [screen, setScreen] = useState<Screen>("welcome");
+
+  if (screen === "welcome") {
+    return (
+      <div style={styles.center}>
+        <h1 style={{ marginBottom: 8 }}>KollabD</h1>
+        <p style={{ color: "#666", marginBottom: 32 }}>
+          A collaborative whiteboard
+        </p>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button style={styles.btn} onClick={() => setScreen("create")}>
+            Create Room
+          </button>
+          <button
+            style={{ ...styles.btn, ...styles.btnSecondary }}
+            onClick={() => setScreen("join")}
+          >
+            Join Room
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "create") {
+    return (
+      <div style={styles.center}>
+        <h2 style={{ marginBottom: 24 }}>Create a Room</h2>
+        <form
+          style={styles.form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            console.log("[App] Creating room, navigating to whiteboard");
+            setScreen("whiteboard");
+          }}
+        >
+          <label style={styles.label}>
+            Room Name
+            <input style={styles.input} type="text" placeholder="My Room" required />
+          </label>
+          <label style={styles.label}>
+            Username
+            <input style={styles.input} type="text" placeholder="Your name" required />
+          </label>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button type="submit" style={styles.btn}>
+              Create
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.btn, ...styles.btnSecondary }}
+              onClick={() => setScreen("welcome")}
+            >
+              Back
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  if (screen === "join") {
+    return (
+      <div style={styles.center}>
+        <h2 style={{ marginBottom: 24 }}>Join a Room</h2>
+        <form
+          style={styles.form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            console.log("[App] Joining room, navigating to whiteboard");
+            setScreen("whiteboard");
+          }}
+        >
+          <label style={styles.label}>
+            Room ID
+            <input style={styles.input} type="text" placeholder="Enter room ID" required />
+          </label>
+          <label style={styles.label}>
+            Username
+            <input style={styles.input} type="text" placeholder="Your name" required />
+          </label>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button type="submit" style={styles.btn}>
+              Join
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.btn, ...styles.btnSecondary }}
+              onClick={() => setScreen("welcome")}
+            >
+              Back
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  return <Whiteboard />;
+}
+
+function Whiteboard() {
   const wsConnection = useRef<WebSocket>(null);
 
   useEffect(() => {
@@ -9,7 +113,7 @@ function App() {
 
     // Connection opened
     socket.addEventListener("open", () => {
-      socket.send("Connection established");
+      console.log("Connection established");
     });
 
     // Listen for messages
@@ -17,13 +121,29 @@ function App() {
       console.log("Message from server ", event.data);
     });
 
+    socket.addEventListener("close", () => {
+      console.log("[WS] Connection closed");
+    });
+
+    socket.addEventListener("error", (event) => {
+      console.error("[WS] Error:", event);
+    });
+
     wsConnection.current = socket;
 
     return () => {
       if (socket.readyState === WebSocket.OPEN) {
+        console.log("[WS] Closing connection on unmount");
         socket.close();
       }
     };
+  }, []);
+
+  const sendDrawing = useCallback((pos: { x: number; y: number }) => {
+    const timestamp = new Date().toISOString();
+    wsConnection.current?.send(
+      JSON.stringify({ ...pos, timestamp, type: "write" }),
+    );
   }, []);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -69,9 +189,9 @@ function App() {
       ctx.lineTo(x, y);
       ctx.stroke();
 
-      wsConnection.current?.send(JSON.stringify({ x, y }));
+      sendDrawing({ x, y });
     },
-    [getCtx, getPos],
+    [getCtx, getPos, sendDrawing],
   );
 
   const stopDrawing = useCallback(() => {
@@ -120,5 +240,50 @@ function App() {
     />
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  center: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100vh",
+    fontFamily: "sans-serif",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 16,
+    width: 280,
+  },
+  label: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    fontSize: 14,
+    fontWeight: 500,
+  },
+  input: {
+    padding: "8px 12px",
+    borderRadius: 6,
+    border: "1px solid #ccc",
+    fontSize: 14,
+    outline: "none",
+  },
+  btn: {
+    padding: "10px 20px",
+    borderRadius: 6,
+    border: "none",
+    background: "#000",
+    color: "#fff",
+    fontSize: 14,
+    cursor: "pointer",
+    flex: 1,
+  },
+  btnSecondary: {
+    background: "#f0f0f0",
+    color: "#000",
+  },
+};
 
 export default App;
