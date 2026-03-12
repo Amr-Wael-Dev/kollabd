@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { mockCreateRoom, mockJoinRoom } from "../mocks/ws";
+import { useWs } from "../hooks/useWs";
 import "./HomeScreen.css";
 
 interface HomeScreenProps {
@@ -9,23 +9,41 @@ interface HomeScreenProps {
 type View = "welcome" | "create" | "join";
 
 export default function HomeScreen({ onEnterRoom }: HomeScreenProps) {
+  const { createRoom, joinRoom, isConnected } = useWs();
   const [view, setView] = useState<View>("welcome");
   const [userName, setUserName] = useState("");
   const [roomName, setRoomName] = useState("");
   const [roomId, setRoomId] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  function handleCreate(e: React.SubmitEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!userName.trim() || !roomName.trim()) return;
-    mockCreateRoom(userName, roomName);
-    onEnterRoom();
+
+    setIsLoading(true);
+    try {
+      await createRoom(userName, roomName);
+      onEnterRoom();
+    } catch {
+      // Error is handled by the provider
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  function handleJoin(e: React.SubmitEvent) {
+  async function handleJoin(e: React.FormEvent) {
     e.preventDefault();
     if (!userName.trim() || !roomId.trim()) return;
-    mockJoinRoom(userName, roomId);
-    onEnterRoom();
+
+    setIsLoading(true);
+    try {
+      await joinRoom(userName, roomId);
+      onEnterRoom();
+    } catch {
+      // Error is handled by the provider
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   if (view === "welcome") {
@@ -34,16 +52,21 @@ export default function HomeScreen({ onEnterRoom }: HomeScreenProps) {
         <div className="home-card">
           <h1 className="home-title">Welcome to KollabD</h1>
           <p className="home-subtitle">A real-time collaborative whiteboard</p>
+          {!isConnected && (
+            <p className="home-error">Connecting to server...</p>
+          )}
           <div className="home-actions">
             <button
               className="home-btn primary"
               onClick={() => setView("create")}
+              disabled={!isConnected}
             >
               Create
             </button>
             <button
               className="home-btn secondary"
               onClick={() => setView("join")}
+              disabled={!isConnected}
             >
               Join
             </button>
@@ -65,6 +88,7 @@ export default function HomeScreen({ onEnterRoom }: HomeScreenProps) {
             value={userName}
             onChange={(e) => setUserName(e.target.value)}
             autoFocus
+            disabled={isLoading}
           />
           <input
             className="home-input"
@@ -72,15 +96,21 @@ export default function HomeScreen({ onEnterRoom }: HomeScreenProps) {
             placeholder="Room Name"
             value={roomName}
             onChange={(e) => setRoomName(e.target.value)}
+            disabled={isLoading}
           />
           <div className="home-actions">
-            <button type="submit" className="home-btn primary">
-              Create
+            <button
+              type="submit"
+              className="home-btn primary"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating..." : "Create"}
             </button>
             <button
               type="button"
               className="home-btn secondary"
               onClick={() => setView("welcome")}
+              disabled={isLoading}
             >
               Back
             </button>
@@ -101,6 +131,7 @@ export default function HomeScreen({ onEnterRoom }: HomeScreenProps) {
           value={userName}
           onChange={(e) => setUserName(e.target.value)}
           autoFocus
+          disabled={isLoading}
         />
         <input
           className="home-input"
@@ -108,15 +139,21 @@ export default function HomeScreen({ onEnterRoom }: HomeScreenProps) {
           placeholder="Room ID"
           value={roomId}
           onChange={(e) => setRoomId(e.target.value)}
+          disabled={isLoading}
         />
         <div className="home-actions">
-          <button type="submit" className="home-btn primary">
-            Join
+          <button
+            type="submit"
+            className="home-btn primary"
+            disabled={isLoading}
+          >
+            {isLoading ? "Joining..." : "Join"}
           </button>
           <button
             type="button"
             className="home-btn secondary"
             onClick={() => setView("welcome")}
+            disabled={isLoading}
           >
             Back
           </button>

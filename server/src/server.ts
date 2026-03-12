@@ -42,9 +42,25 @@ const BASE_URL = process.env.BASE_URL!;
 const users = new Map<User["id"], ServerUser>();
 const rooms = new Map<Room["id"], ServerRoom>();
 
-function getRandomColor(): User["color"] {
+function getRandomColor(excludeColors: string[] = []): User["color"] {
   const colors = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6"];
-  return colors[Math.floor(Math.random() * colors.length)];
+  const availableColors = colors.filter((c) => !excludeColors.includes(c));
+
+  // If all colors are used, return a random one from the full list
+  if (availableColors.length === 0) {
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  return availableColors[Math.floor(Math.random() * availableColors.length)];
+}
+
+function getUsedColorsInRoom(roomId: string): string[] {
+  const room = rooms.get(roomId);
+  if (!room) return [];
+
+  return room.users
+    .map((userId) => users.get(userId)?.color)
+    .filter((color): color is string => color !== undefined);
 }
 
 function send(ws: WebSocket, event: BaseEvent) {
@@ -76,14 +92,15 @@ function broadcast(roomId: string, event: BaseEvent, excludeUserId?: string) {
   }
 }
 
-function createUser(ws: WebSocket, name: string): ServerUser {
+function createUser(ws: WebSocket, name: string, roomId?: string): ServerUser {
   const id = crypto.randomUUID();
+  const usedColors = roomId ? getUsedColorsInRoom(roomId) : [];
 
   const user: ServerUser = {
     id,
     name,
     ws,
-    color: getRandomColor(),
+    color: getRandomColor(usedColors),
     cursor: { x: 0, y: 0 },
   };
 
@@ -110,6 +127,7 @@ function createRoom(ws: WebSocket, event: CreateRoomEvent) {
     roomId,
     roomName: event.roomName,
     userId: user.id,
+    userName: user.name,
     color: user.color,
     timestamp: event.timestamp,
   };
@@ -121,20 +139,31 @@ function joinRoom(ws: WebSocket, event: JoinRoomEvent) {
   const room = rooms.get(event.roomId);
   if (!room) throw new Error("Room not found");
 
-  const user = createUser(ws, event.userName);
-  user.roomId = event.roomId;
+  const newUser = createUser(ws, event.userName, event.roomId);
+  newUser.roomId = event.roomId;
 
-  room.users.push(user.id);
+  room.users.push(newUser.id);
 
   const usersInRoom = room.users
     .map((id) => users.get(id))
-    .filter(Boolean) as User[];
+    .filter(Boolean)
+    .map(
+      (user) =>
+        ({
+          color: user?.color,
+          cursor: user?.cursor,
+          id: user?.id,
+          name: user?.name,
+        }) as User,
+    );
 
   const response: RoomJoinedEvent = {
     type: "roomJoined",
-    userId: user.id,
-    color: user.color,
+    roomId: room.id,
+    userId: newUser.id,
+    color: newUser.color,
     roomName: room.name,
+    adminId: room.adminId,
     users: usersInRoom,
     canvasElements: room.canvasElements,
     timestamp: event.timestamp,
@@ -144,13 +173,13 @@ function joinRoom(ws: WebSocket, event: JoinRoomEvent) {
 
   const joinEvent: UserJoinedEvent = {
     type: "userJoined",
-    newUserId: user.id,
-    newUserName: user.name,
-    color: user.color,
+    newUserId: newUser.id,
+    newUserName: newUser.name,
+    color: newUser.color,
     timestamp: Date.now(),
   };
 
-  broadcast(event.roomId, joinEvent, user.id);
+  broadcast(event.roomId, joinEvent, newUser.id);
 }
 
 function leaveRoom(event: LeaveRoomEvent) {

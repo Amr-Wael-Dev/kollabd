@@ -84,3 +84,15 @@
 .home-btn.secondary:hover {
   background: var(--color-border);
 }
+
+.home-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.home-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-accent);
+  text-align: center;
+}

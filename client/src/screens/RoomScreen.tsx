@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Tool, StrokeStyle } from "../types/app";
-import { mockRoom, mockCurrentUser } from "../mocks/data";
-import { mockLeaveRoom, mockKickUser } from "../mocks/ws";
+import { useWs } from "../hooks/useWs";
 import TopBar from "../components/TopBar";
 import Canvas from "../components/Canvas";
 import HorizontalToolbar from "../components/HorizontalToolbar";
@@ -14,6 +13,7 @@ interface RoomScreenProps {
 }
 
 export default function RoomScreen({ onLeave }: RoomScreenProps) {
+  const { room, currentUserId, leaveRoom, kickUser } = useWs();
   const [activeTool, setActiveTool] = useState<Tool>("pointer");
   const [color, setColor] = useState("#000000");
   const [strokeWidth, setStrokeWidth] = useState(2);
@@ -24,20 +24,36 @@ export default function RoomScreen({ onLeave }: RoomScreenProps) {
     "left",
   );
 
+  // Handle kicked from room
+  useEffect(() => {
+    if (!room) {
+      onLeave();
+    }
+  }, [room, onLeave]);
+
   function handleLeave() {
-    mockLeaveRoom();
+    leaveRoom();
     onLeave();
   }
 
   function handleKick(userId: string) {
-    mockKickUser(userId);
+    kickUser(userId);
+  }
+
+  // Show loading or redirect if no room
+  if (!room) {
+    return (
+      <div className="room-screen">
+        <div className="room-loading">Loading...</div>
+      </div>
+    );
   }
 
   return (
     <div className="room-screen">
       <TopBar
-        room={mockRoom}
-        currentUserId={mockCurrentUser.id}
+        room={room}
+        currentUserId={currentUserId || ""}
         onLeave={handleLeave}
         onKick={handleKick}
       />

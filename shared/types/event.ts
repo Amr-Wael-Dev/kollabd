@@ -63,6 +63,7 @@ export interface EraseEvent extends BaseEvent {
 export interface RoomCreatedEvent extends BaseEvent {
   type: "roomCreated";
   userId: User["id"];
+  userName: User["name"];
   color: User["color"];
   roomId: Room["id"];
   roomName: Room["name"];
@@ -70,9 +71,11 @@ export interface RoomCreatedEvent extends BaseEvent {
 
 export interface RoomJoinedEvent extends BaseEvent {
   type: "roomJoined";
+  roomId: Room["id"];
   userId: User["id"];
   color: User["color"];
   roomName: Room["name"];
+  adminId: Room["adminId"];
   users: User[];
   canvasElements: CanvasElement[];
 }

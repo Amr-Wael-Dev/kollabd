@@ -3,11 +3,22 @@ import "./UserAvatar.css";
 
 interface UserAvatarProps {
   user: User;
-  isAdmin?: boolean;
+  isCurrentUserAdmin: boolean;
+  adminId: string;
+  currentUserId: string;
   onKick?: (userId: string) => void;
 }
 
-export default function UserAvatar({ user, isAdmin, onKick }: UserAvatarProps) {
+export default function UserAvatar({
+  user,
+  isCurrentUserAdmin,
+  adminId,
+  currentUserId,
+  onKick,
+}: UserAvatarProps) {
+  const isUserAdmin = user.id === adminId;
+  const canKick = isCurrentUserAdmin && user.id !== currentUserId;
+
   return (
     <div className="user-avatar-wrapper">
       <div
@@ -15,12 +26,12 @@ export default function UserAvatar({ user, isAdmin, onKick }: UserAvatarProps) {
         style={{ backgroundColor: user.color }}
         title={user.name}
       >
-        {user.name[0].toUpperCase()}
+        {user.name?.[0]?.toUpperCase() ?? "?"}
       </div>
       <div className="user-avatar-popover">
         <span className="popover-name">{user.name}</span>
-        {isAdmin && <span className="admin-badge">admin</span>}
-        {isAdmin && onKick && (
+        {isUserAdmin && <span className="admin-badge">admin</span>}
+        {canKick && onKick && (
           <button className="kick-btn" onClick={() => onKick(user.id)}>
             Kick
           </button>

@@ -11,7 +11,14 @@ interface TopBarProps {
   onKick: (userId: string) => void;
 }
 
-export default function TopBar({ room, onLeave, onKick }: TopBarProps) {
+export default function TopBar({
+  room,
+  currentUserId,
+  onLeave,
+  onKick,
+}: TopBarProps) {
+  const isAdmin = room.adminId === currentUserId;
+
   function copyRoomId() {
     navigator.clipboard.writeText(room.id);
     toast.success("Room ID copied!");
@@ -33,7 +40,9 @@ export default function TopBar({ room, onLeave, onKick }: TopBarProps) {
             <UserAvatar
               key={user.id}
               user={user}
-              isAdmin={user.id === room.adminId}
+              isCurrentUserAdmin={isAdmin}
+              adminId={room.adminId}
+              currentUserId={currentUserId}
               onKick={onKick}
             />
           ))}
