@@ -97,7 +97,7 @@
 }
 
 .v-toolbar-align-btn.active {
-  background: var(--color-accent);
-  color: #fff;
-  border-color: var(--color-accent);
+  background: var(--color-accent-primary);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent-primary);
 }

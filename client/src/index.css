@@ -1,12 +1,35 @@
 :root {
-  --color-bg: #1a1a2e;
-  --color-surface: #16213e;
-  --color-border: #2a2a4a;
-  --color-hover: rgba(255, 255, 255, 0.06);
-  --color-text: rgba(255, 255, 255, 0.9);
-  --color-muted: rgba(255, 255, 255, 0.45);
-  --color-accent: #6c5ce7;
-  --color-grid-dot: rgba(255, 255, 255, 0.06);
+  --color-bg-primary: #ffffff;
+  --color-bg-surface: #f7f7fb;
+  --color-bg-hover: rgba(0, 0, 0, 0.05);
+  --color-bg-canvas-grid: rgba(0, 0, 0, 0.08);
+  --color-bg-danger-hover: rgba(231, 76, 60, 0.12);
+
+  --color-border-default: #e2e2ea;
+  --color-border-avatar: rgba(0, 0, 0, 0.15);
+
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #6b6b7a;
+  --color-text-loading: #888;
+  --color-text-on-accent: #ffffff;
+  --color-text-on-danger: #ffffff;
+
+  --color-accent-primary: #6c5ce7;
+
+  --color-danger-primary: #e74c3c;
+  --color-danger-hover: #c0392b;
+
+  --color-shadow-cursor-name: rgba(0, 0, 0, 0.1);
+  --color-shadow-cursor-icon: rgba(0, 0, 0, 0.15);
+
+  --color-bg: var(--color-bg-primary);
+  --color-surface: var(--color-bg-surface);
+  --color-border: var(--color-border-default);
+  --color-hover: var(--color-bg-hover);
+  --color-grid-dot: var(--color-bg-canvas-grid);
+  --color-text: var(--color-text-primary);
+  --color-muted: var(--color-text-secondary);
+  --color-accent: var(--color-accent-primary);
 
   font-family:
     system-ui,

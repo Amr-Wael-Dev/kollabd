@@ -68,8 +68,8 @@
 }
 
 .home-btn.primary {
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--color-accent-primary);
+  color: var(--color-text-on-accent);
 }
 
 .home-btn.primary:hover {
