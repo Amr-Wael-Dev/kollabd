@@ -21,6 +21,9 @@ import type {
   AcknowledgeEvent,
   MoveCursorEvent,
   CursorMovedEvent,
+  DrawEvent,
+  ElementDrawnEvent,
+  CanvasElement,
 } from "@kollabd/shared";
 import { toast } from "sonner";
 import { WsContext } from "../hooks/useWs";
@@ -163,6 +166,18 @@ export function WsProvider({ children }: { children: ReactNode }) {
         break;
       }
 
+      case "elementDrawn": {
+        const e = event as ElementDrawnEvent;
+        setRoom((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            canvasElements: [...prev.canvasElements, e.element],
+          };
+        });
+        break;
+      }
+
       default:
         console.log("Unhandled event:", event);
     }
@@ -285,6 +300,31 @@ export function WsProvider({ children }: { children: ReactNode }) {
     [room, currentUserId, send],
   );
 
+  const draw = useCallback(
+    (element: CanvasElement) => {
+      if (!room || !currentUserId) return;
+
+      const event: DrawEvent = {
+        type: "draw",
+        userId: currentUserId,
+        roomId: room.id,
+        element,
+        timestamp: Date.now(),
+      };
+      send(event);
+
+      // Optimistically add the element to local state
+      setRoom((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          canvasElements: [...prev.canvasElements, element],
+        };
+      });
+    },
+    [room, currentUserId, send],
+  );
+
   return (
     <WsContext
       value={{
@@ -298,6 +338,7 @@ export function WsProvider({ children }: { children: ReactNode }) {
         kickUser,
         disconnect,
         moveCursor,
+        draw,
       }}
     >
       {children}

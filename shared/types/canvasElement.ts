@@ -54,7 +54,7 @@ interface ShapeElement<
   strokeWidth: number;
 }
 
-interface DrawingElement extends BaseElement {
+export interface DrawingElement extends BaseElement {
   type: "drawing";
   points: Point[];
 }

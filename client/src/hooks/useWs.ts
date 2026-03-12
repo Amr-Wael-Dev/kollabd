@@ -1,4 +1,4 @@
-import type { Room, User } from "@kollabd/shared";
+import type { Room, User, CanvasElement } from "@kollabd/shared";
 import { createContext, use } from "react";
 
 interface WsContextValue {
@@ -12,6 +12,7 @@ interface WsContextValue {
   kickUser: (userId: string) => void;
   disconnect: () => void;
   moveCursor: (position: User["cursor"]) => void;
+  draw: (element: CanvasElement) => void;
 }
 
 export const WsContext = createContext<WsContextValue | null>(null);

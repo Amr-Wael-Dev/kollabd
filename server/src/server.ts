@@ -19,6 +19,8 @@ import {
   UserLeftEvent,
   MoveCursorEvent,
   CursorMovedEvent,
+  DrawEvent,
+  ElementDrawnEvent,
 } from "@kollabd/shared";
 
 type ServerUser = User & {
@@ -262,6 +264,24 @@ function moveCursor(ws: WebSocket, event: MoveCursorEvent) {
   broadcast(event.roomId, cursorMovedEvent, event.userId);
 }
 
+function handleDraw(ws: WebSocket, event: DrawEvent) {
+  const room = rooms.get(event.roomId);
+  if (!room) return;
+
+  // Add the element to the room's canvas elements
+  room.canvasElements.push(event.element);
+
+  // Broadcast the drawn element to other users in the room
+  const elementDrawnEvent: ElementDrawnEvent = {
+    type: "elementDrawn",
+    userId: event.userId,
+    element: event.element,
+    timestamp: event.timestamp,
+  };
+
+  broadcast(event.roomId, elementDrawnEvent, event.userId);
+}
+
 function handleDisconnect(ws: WebSocket) {
   let userId: string | undefined;
 
@@ -326,6 +346,10 @@ wsServer.on("connection", (ws) => {
 
         case "moveCursor":
           moveCursor(ws, event as MoveCursorEvent);
+          break;
+
+        case "draw":
+          handleDraw(ws, event as DrawEvent);
           break;
 
         default:
