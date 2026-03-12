@@ -17,6 +17,8 @@ import {
   UserKickedEvent,
   KickedEvent,
   UserLeftEvent,
+  MoveCursorEvent,
+  CursorMovedEvent,
 } from "@kollabd/shared";
 
 type ServerUser = User & {
@@ -242,6 +244,24 @@ function kickUser(ws: WebSocket, event: KickUserEvent) {
   sendAck(ws, true, `User ${event.kickedUserId} kicked`);
 }
 
+function moveCursor(ws: WebSocket, event: MoveCursorEvent) {
+  const user = users.get(event.userId);
+  if (!user) return;
+
+  // Update user's cursor position
+  user.cursor = event.position;
+
+  // Broadcast cursor movement to other users in the room
+  const cursorMovedEvent: CursorMovedEvent = {
+    type: "cursorMoved",
+    userId: event.userId,
+    position: event.position,
+    timestamp: event.timestamp,
+  };
+
+  broadcast(event.roomId, cursorMovedEvent, event.userId);
+}
+
 function handleDisconnect(ws: WebSocket) {
   let userId: string | undefined;
 
@@ -302,6 +322,10 @@ wsServer.on("connection", (ws) => {
 
         case "kickUser":
           kickUser(ws, event as KickUserEvent);
+          break;
+
+        case "moveCursor":
+          moveCursor(ws, event as MoveCursorEvent);
           break;
 
         default:

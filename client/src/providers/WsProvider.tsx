@@ -19,6 +19,8 @@ import type {
   UserLeftEvent,
   UserKickedEvent,
   AcknowledgeEvent,
+  MoveCursorEvent,
+  CursorMovedEvent,
 } from "@kollabd/shared";
 import { toast } from "sonner";
 import { WsContext } from "../hooks/useWs";
@@ -147,6 +149,20 @@ export function WsProvider({ children }: { children: ReactNode }) {
         break;
       }
 
+      case "cursorMoved": {
+        const e = event as CursorMovedEvent;
+        setRoom((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            users: prev.users.map((user) =>
+              user.id === e.userId ? { ...user, cursor: e.position } : user,
+            ),
+          };
+        });
+        break;
+      }
+
       default:
         console.log("Unhandled event:", event);
     }
@@ -253,6 +269,22 @@ export function WsProvider({ children }: { children: ReactNode }) {
     wsRef.current?.close();
   }, []);
 
+  const moveCursor = useCallback(
+    (position: User["cursor"]) => {
+      if (!room || !currentUserId) return;
+
+      const event: MoveCursorEvent = {
+        type: "moveCursor",
+        userId: currentUserId,
+        roomId: room.id,
+        position,
+        timestamp: Date.now(),
+      };
+      send(event);
+    },
+    [room, currentUserId, send],
+  );
+
   return (
     <WsContext
       value={{
@@ -265,6 +297,7 @@ export function WsProvider({ children }: { children: ReactNode }) {
         leaveRoom,
         kickUser,
         disconnect,
+        moveCursor,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { Tool, StrokeStyle } from "../types/app";
 import { useWs } from "../hooks/useWs";
 import TopBar from "../components/TopBar";
@@ -6,6 +6,7 @@ import Canvas from "../components/Canvas";
 import HorizontalToolbar from "../components/HorizontalToolbar";
 import VerticalToolbar from "../components/VerticalToolbar";
 import ZoomControls from "../components/ZoomControls";
+import CursorOverlay from "../components/CursorOverlay";
 import "./RoomScreen.css";
 
 interface RoomScreenProps {
@@ -13,7 +14,7 @@ interface RoomScreenProps {
 }
 
 export default function RoomScreen({ onLeave }: RoomScreenProps) {
-  const { room, currentUserId, leaveRoom, kickUser } = useWs();
+  const { room, currentUserId, leaveRoom, kickUser, moveCursor } = useWs();
   const [activeTool, setActiveTool] = useState<Tool>("pointer");
   const [color, setColor] = useState("#000000");
   const [strokeWidth, setStrokeWidth] = useState(2);
@@ -23,6 +24,8 @@ export default function RoomScreen({ onLeave }: RoomScreenProps) {
   const [alignment, setAlignment] = useState<"left" | "center" | "right">(
     "left",
   );
+  const canvasAreaRef = useRef<HTMLDivElement>(null);
+  const lastCursorSendTime = useRef(0);
 
   // Handle kicked from room
   useEffect(() => {
@@ -30,6 +33,27 @@ export default function RoomScreen({ onLeave }: RoomScreenProps) {
       onLeave();
     }
   }, [room, onLeave]);
+
+  // Throttled cursor movement handler
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const now = Date.now();
+      // Throttle to ~30fps (33ms)
+      if (now - lastCursorSendTime.current < 33) return;
+
+      if (!canvasAreaRef.current) return;
+
+      const rect = canvasAreaRef.current.getBoundingClientRect();
+      const position = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+
+      moveCursor(position);
+      lastCursorSendTime.current = now;
+    },
+    [moveCursor],
+  );
 
   function handleLeave() {
     leaveRoom();
@@ -57,8 +81,13 @@ export default function RoomScreen({ onLeave }: RoomScreenProps) {
         onLeave={handleLeave}
         onKick={handleKick}
       />
-      <div className="room-canvas-area">
+      <div
+        className="room-canvas-area"
+        ref={canvasAreaRef}
+        onMouseMove={handleMouseMove}
+      >
         <Canvas />
+        <CursorOverlay users={room.users} currentUserId={currentUserId} />
         <VerticalToolbar
           activeTool={activeTool}
           color={color}

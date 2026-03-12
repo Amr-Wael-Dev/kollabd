@@ -1,4 +1,4 @@
-import type { Room } from "@kollabd/shared";
+import type { Room, User } from "@kollabd/shared";
 import { createContext, use } from "react";
 
 interface WsContextValue {
@@ -11,6 +11,7 @@ interface WsContextValue {
   leaveRoom: () => void;
   kickUser: (userId: string) => void;
   disconnect: () => void;
+  moveCursor: (position: User["cursor"]) => void;
 }
 
 export const WsContext = createContext<WsContextValue | null>(null);
