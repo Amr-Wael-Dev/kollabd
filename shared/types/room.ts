@@ -1,5 +1,5 @@
-import { User } from "./user";
-import { CanvasElement } from "./canvasElement";
+import type { User } from "./user";
+import type { CanvasElement } from "./canvasElement";
 
 export interface Room {
   id: string;

@@ -1,6 +1,6 @@
-import { CanvasElement } from "./canvasElement";
-import { Room } from "./room";
-import { User } from "./user";
+import type { CanvasElement } from "./canvasElement";
+import type { Room } from "./room";
+import type { User } from "./user";
 
 export interface BaseEvent {
   type: string;
